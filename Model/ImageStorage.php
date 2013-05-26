@@ -9,6 +9,7 @@ App::uses('Folder', 'Utility');
  * @license MIT
  */
 class ImageStorage extends FileStorage {
+
 /**
  * Table to use
  *
@@ -146,6 +147,7 @@ class ImageStorage extends FileStorage {
 
 /**
  * @deperacted This has been replaced by Events
+ * @throws InternalErrorException
  */
 	public function createVersions($data = array(), $format = 'jpg') {
 		throw new InternalErrorException(__('file_storage', 'ImageStorage::createVersions is deprecated use the event system.'));
@@ -159,13 +161,58 @@ class ImageStorage extends FileStorage {
  * @return void
  * @link https://gist.github.com/601849
  */
-	public function ksortRecursive(&$array, $sort_flags = SORT_REGULAR) {
+	public function ksortRecursive(&$array, $sortFlags = SORT_REGULAR) {
 		if (!is_array($array)) return false;
-		ksort($array, $sort_flags);
+		ksort($array, $sortFlags);
 		foreach ($array as &$arr) {
-			$this->ksortRecursive($arr, $sort_flags);
+			$this->ksortRecursive($arr, $sortFlags);
 		}
 		return true;
 	}
 
+/**
+ * Image size validation method
+ *
+ * @param mixed $check
+ * @param array $options
+ * @return boolean true
+ * @throws \InvalidArgumentException
+ */
+	public function validateImageSize($check, $options) {
+		if (!isset($options['height']) && !isset($options['width'])) {
+			throw new \InvalidArgumentException(__d('file_storage', 'Invalid image size validation parameters'));
+		}
+
+		if (is_string($check)) {
+			$imageFile = $check;
+		} else {
+			$check = array_values($check);
+			$check = $check[0];
+			if (is_array($check) && isset($check['tmp_name'])) {
+				$imageFile = $check['tmp_name'];
+			} else {
+				$imageFile = $check;
+			}
+		}
+
+		$imageSizes = $this->getImageSize($imageFile);
+
+		if (isset($options['height'])) {
+			$height = Validation::comparison($imageSizes[1], $options['height'][0], $options['height'][1]);
+		} else {
+			$height = true;
+		}
+
+		if (isset($options['width'])) {
+			$width = Validation::comparison($imageSizes[0], $options['width'][0], $options['width'][1]);
+		} else {
+			$width = true;
+		}
+
+		if ($height === false || $width === false) {
+			return false;
+		}
+
+		return true;
+	}
 }

@@ -34,6 +34,10 @@ To be able to simply autoload Gaufrette load the plugin with bootstrap enabled. 
 
 	CakePlugin::load('FileStorage', array('bootstrap' => true));
 
+You also need to setup the plugin database :
+
+    cake schema create --plugin FileStorage
+
 This plugin depends on the Gaufrette library (https://github.com/KnpLabs/Gaufrette), init the submodule, the plugin depends on it.
 
 	git submodule update --init
@@ -42,9 +46,7 @@ If you want to use S3 upload Gaufrette has also submodules to initialize. Here i
 
 	cd YOUR-APP-FOLDER
 	git submodule add git://github.com/burzum/FileStorage.git Plugin/FileStorage
-	git submodule update --init
-	cd Plugin/FileStorage
-	git submodule update --init
+	git submodule update --init --recursive
 
 If you do not want to add it as submodule just clone it instead of doing submodule add
 
@@ -102,10 +104,10 @@ Because of to many different requirements and personal preferences out there the
 
 Lets go by this scenario inside the report model, assuming there is an add() method:
 
-	$this->create()
+	$this->create();
 	if ($this->save($data)) {
 		$key = 'your-file-name';
-		if (StorageManager::adapter('Local')->write($key, file_get_contents($this->data['PdfFile']['tmp_name']))) {
+		if (StorageManager::adapter('Local')->write($key, file_get_contents($this->data['PdfFile']['file']['tmp_name']))) {
 			$this->data['PdfFile']['foreign_key'] = $this->getLastInsertId();
 			$this->data['PdfFile']['model'] = 'Report';
 			$this->data['PdfFile']['path'] = $key;
@@ -202,11 +204,69 @@ You should smylink your image root folder to APP/webroot/images for example to a
 
 It is possible to totally change the way image versions are created.
 
+## Specific Addapter Configuration
+
+Gaufrette does not come with a lot detail about what exactly some adapters expect so here is a list to help you with that.
+
+But you should not blindly copy and paste that code, get an understanding of the storage service you want to use before!
+
+### OpenCloud (Rackspace)
+
+Get the SDK from here http://github.com/rackspace/php-opencloud and add it to your class autoloader
+
+	define('RAXSDK_SSL_VERIFYHOST', 0);
+	define('RAXSDK_SSL_VERIFYPEER', 0);
+
+	$connection = new \OpenCloud\Rackspace(
+		'https://lon.identity.api.rackspacecloud.com/v2.0/', // Rackspace Auth URL
+		array(
+			'username' => 'YOUR-USERNAME',
+			'apiKey' => 'YOUR-API-KEY'
+		)
+	);
+
+	// LON (London) or DFW (Dallas)
+	$objstore = $connection->ObjectStore('cloudFiles', 'LON');
+
+	StorageManager::config('OpenCloudTest', array(
+		'adapterOptions' => array(
+			$objstore,
+			'test1',
+		),
+		'adapterClass' => '\Gaufrette\Adapter\OpenCloud',
+		'class' => '\Gaufrette\Filesystem')
+	);
+
+### AmazonS3
+
+Get the SDK from here http:// github.com/amazonwebservices/aws-sdk-for-php and load the sdk.class.php file from where ever you cloned the SDK.
+
+	require_once(APP . 'Vendor' . DS . 'AwsSdk' . DS . 'sdk.class.php');
+	CFCredentials::set(array(
+		'production' => array(
+			'certificate_authority' => true,
+			'key' => 'YOUR-KEY',
+			'secret' => 'YOUR-SECRET')
+		)
+	);
+	$s3 = new AmazonS3();
+
+	StorageManager::config('S3', array(
+		'adapterOptions' => array(
+			$s3,
+			'YOUR-BUCKET-HERE'),
+		'adapterClass' => '\Gaufrette\Adapter\AmazonS3',
+		'class' => '\Gaufrette\Filesystem'));
+
 ## Support
 
 For support and feature request, please visit the FileStorage issue page
 
 https://github.com/burzum/FileStorage/issues
+
+## Contributions
+
+Please send pull request to `develop` branch.
 
 ## License
 

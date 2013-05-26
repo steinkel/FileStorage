@@ -12,6 +12,7 @@ App::uses('FileStorageUtils', 'FileStorage.Utility');
  * @license MIT
  */
 class FileStorage extends FileStorageAppModel {
+
 /**
  * Name
  *
@@ -76,6 +77,7 @@ class FileStorage extends FileStorageAppModel {
 /**
  * beforeSave callback
  *
+ * @param array $options
  * @return boolean true on success
  */
 	public function beforeSave($options = array()) {
@@ -152,6 +154,14 @@ class FileStorage extends FileStorageAppModel {
  * @return mixed
  */
 	public function afterDelete() {
+		try {
+			$Storage = Storagemanager::adapter($this->record[$this->alias]['adapter']);
+			$Storage->delete($this->record[$this->alias]['path']);
+		} catch (Exception $e) {
+			$this->log($e->getMessage(), 'file_storage');
+			return false;
+		}
+
 		$Event = new CakeEvent('FileStorage.afterDelete', $this, array(
 			'record' => $this->record,
 			'storage' => StorageManager::adapter($this->record[$this->alias]['adapter'])));
@@ -181,7 +191,7 @@ class FileStorage extends FileStorageAppModel {
 			new Folder($path, true);
 		}
 
-		return $path . String::uuid();;
+		return $path . String::uuid();
 	}
 
 /**
