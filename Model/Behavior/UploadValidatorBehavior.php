@@ -82,14 +82,15 @@ class UploadValidatorBehavior extends ModelBehavior {
  * extensions and / or mime type if configured to do so.
  *
  * @param Model $Model
+ * @param array $options
  * @return boolean True on success
  */
-	public function beforeValidate(Model $Model) {
+	public function beforeValidate(Model $Model, $options = array()) {
 		extract($this->settings[$Model->alias]);
 		if ($validate === true && isset($Model->data[$Model->alias][$fileField]) && is_array($Model->data[$Model->alias][$fileField])) {
 
 			if ($Model->validateUploadError($Model->data[$Model->alias][$fileField]['error']) === false) {
-				$Model->validationErrors[$fileField] = $this->uploadError;
+				$Model->validationErrors[$fileField] = array($this->uploadError);
 				return false;
 			}
 
@@ -103,7 +104,6 @@ class UploadValidatorBehavior extends ModelBehavior {
 
 			if (is_array($allowedMime)) {
 				if (!$this->validateAllowedMimeTypes($Model, $allowedMime)) {
-					$Model->invalidate($fileField, $this->uploadError);
 					return false;
 				}
 			}
@@ -185,6 +185,7 @@ class UploadValidatorBehavior extends ModelBehavior {
 				case UPLOAD_ERR_NO_FILE:
 					if ($this->settings[$Model->alias]['allowNoFileError'] === false) {
 						$this->uploadError = __d('FileStorage', 'No file was uploaded.');
+						return false;
 					}
 					return true;
 				break;
